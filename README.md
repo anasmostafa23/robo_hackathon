@@ -1,10 +1,9 @@
 # Robotics Hackathon 2025: Multi-Robot Task Scheduler
 
+### Обзор проблемы
+Этот проект предоставляет программное обеспечение для планирования совместной работы нескольких промышленных роботов-манипуляторов. Цель состоит в том, чтобы минимизировать общее время работы (makespan), при этом не допуская столкновений между роботами.
 
-### Problem Overview
-This project provides a software core for planning and scheduling the cooperative work of multiple industrial robot arms. The goal is to minimize the total operation time (makespan) while ensuring no collisions occur between robots.
-
-### Repository Structure
+### Структура репозитория
 
 robotics-hackathon-2025/
 ├── src/ # Source code
@@ -13,15 +12,15 @@ robotics-hackathon-2025/
 └── README.md # This file
 
 
-### Installation & Setup
+### Установка и настройка
 
-1.  **Clone the repository:**
+1. **Клонировать репозиторий:**
     ```bash
     git clone https://github.com/your-username/your-repo-name.git
     cd your-repo-name
     ```
 
-2.  **Create a virtual environment (Highly Recommended):**
+2. **Создайте виртуальную среду (настоятельно рекомендуется):**
     ```bash
     python -m venv venv
     # On Windows:
@@ -30,26 +29,27 @@ robotics-hackathon-2025/
     source venv/bin/activate
     ```
 
-3.  **Install the required dependencies:**
+3. **Установите необходимые зависимости:**
     ```bash
     pip install -r requirements.txt
     ```
 
-### How to Run the Code
+### Как запустить код
 
-1.  **Prepare input file. `input.txt` 
+1. **Подготовьте входной файл. `input.txt` 
 
-2.  **Run the main program from the repository's root directory:**
+2. **Запустите основную программу из корневого каталога репозитория:**
     ```bash
     python src/main.py
     ```
 
-3.  **Check the output.**
-    The program will generate an `output.txt` file in the root directory with the calculated schedule and waypoints.
+3. **Проверьте выходные данные.**
+    Программа сгенерирует файл `output.txt` в корневом каталоге с рассчитанным расписанием и путевыми точками.
 
-### How to Test with Different Scenarios
+### Как проводить тестирование в различных сценариях
 
-Simply replace the contents of `data/input.txt` with a new dataset that follows the same format and run the command again.
+Просто замените содержимое  `data/input.txt` новым набором данных, который соответствует тому же формату, и запустите команду снова.
 
-### Example Input
-A sample `data/input.txt` file for 2 robots and 2 operations:
+### Пример ввода
+Пример файла  `data/input.txt` для 2 роботов и 2 операций:
+
