@@ -24,4 +24,4 @@ def main(input_filename):
     print("Done!")
 
 if __name__ == "__main__":
-    main('input.txt') # Run the program
+    main('../data/input.txt') # Run the program
