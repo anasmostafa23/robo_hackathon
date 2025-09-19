@@ -1,6 +1,6 @@
 # main.py
 from input_parser import parse_input
-from scheduler import assign_operations, plan_paths
+from brain/scheduler import assign_operations, plan_paths
 from collision_checker import check_collisions, resolve_collisions
 from output_generator import write_output
 
