@@ -1,6 +1,5 @@
 # Robotics Hackathon 2025: Multi-Robot Task Scheduler
 
-## Team: [Your Team Name Here]
 
 ### Problem Overview
 This project provides a software core for planning and scheduling the cooperative work of multiple industrial robot arms. The goal is to minimize the total operation time (makespan) while ensuring no collisions occur between robots.
