@@ -1,8 +1,7 @@
-# src/brain/scheduler.py
+# scheduler.py
 import math
-from models.data_models import Robot, Operation, Point, Waypoint
 
-def calculate_move_time(distance: float, v_max: float, a_max: float) -> float:
+def calculate_move_time(distance, v_max, a_max):
     """
     Calculates time for a move using a trapezoidal velocity profile.
     Returns: time in seconds
@@ -13,83 +12,73 @@ def calculate_move_time(distance: float, v_max: float, a_max: float) -> float:
     d_acc = 0.5 * a_max * t_acc * t_acc
 
     if distance < 2 * d_acc:
-        # Robot never reaches full speed (triangle profile)
+        # Robot never reaches full speed
         t_total = 2 * math.sqrt(distance / a_max)
     else:
-        # Robot spends time at full speed (trapezoid profile)
+        # Robot spends time at full speed
         t_cruise = (distance - 2 * d_acc) / v_max
         t_total = 2 * t_acc + t_cruise
     return t_total
 
-def assign_operations(robots: list[Robot], operations: list[Operation]):
+def assign_operations(robots, operations):
     """
     Simple assignment: assign each operation to the robot closest to its pick-up point.
-    Modifies the robots list in-place by appending to each robot's `operations` list.
+    Modifies the robots list in-place.
     """
     for op in operations:
+        pick_point = (op['pick_x'], op['pick_y'], op['pick_z'])
         min_dist = float('inf')
         best_robot = None
 
         for robot in robots:
-            # Calculate Euclidean distance from robot's base to the pick point
-            dist = math.sqrt(
-                (robot.base_pos.x - op.pick_pos.x)**2 +
-                (robot.base_pos.y - op.pick_pos.y)**2 +
-                (robot.base_pos.z - op.pick_pos.z)**2
-            )
+            robot_pos = (robot['base_x'], robot['base_y'], robot['base_z'])
+            # Calculate Euclidean distance
+            dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(pick_point, robot_pos)))
             if dist < min_dist:
                 min_dist = dist
                 best_robot = robot
 
-        # Assign this operation to the closest robot
-        best_robot.operations.append(op)
+        best_robot['operations'].append(op)
 
-def plan_paths(robots: list[Robot], v_max: float, a_max: float):
+def plan_paths(robots, v_max, a_max):
     """
     For each robot, plan its path by calculating waypoints and timings.
-    Modifies each robot object in-place by setting its `schedule` and `makespan`.
+    Adds 'schedule' key to each robot, which is a list of (time, x, y, z) waypoints.
     """
     for robot in robots:
-        schedule = [] # This will be a list of Waypoint objects
-        current_time = 0.0 # Keeps track of the robot's personal timeline
-        current_pos = robot.base_pos # Start at the robot's base
+        schedule = []
+        current_time = 0.0
+        current_pos = (robot['base_x'], robot['base_y'], robot['base_z'])
 
-        # Start at the base (time = 0)
-        schedule.append(Waypoint(t=current_time, x=current_pos.x, y=current_pos.y, z=current_pos.z))
+        # Start at base
+        schedule.append((current_time, current_pos[0], current_pos[1], current_pos[2]))
 
-        for op in robot.operations:
-            # 1. Move from current position to the PICK point
-            dist_to_pick = math.sqrt(
-                (current_pos.x - op.pick_pos.x)**2 +
-                (current_pos.y - op.pick_pos.y)**2 +
-                (current_pos.z - op.pick_pos.z)**2
-            )
+        for op in robot['operations']:
+            pick_point = (op['pick_x'], op['pick_y'], op['pick_z'])
+            place_point = (op['place_x'], op['place_y'], op['place_z'])
+
+            # Move to Pick
+            dist_to_pick = math.sqrt(sum((a - b) ** 2 for a, b in zip(current_pos, pick_point)))
             time_to_pick = calculate_move_time(dist_to_pick, v_max, a_max)
             current_time += time_to_pick
-            # Add the arrival at the Pick point to the schedule
-            schedule.append(Waypoint(t=current_time, x=op.pick_pos.x, y=op.pick_pos.y, z=op.pick_pos.z))
+            schedule.append((current_time, pick_point[0], pick_point[1], pick_point[2]))
 
-            # 2. Perform the Pick operation (wait at the pick point)
-            current_time += op.t_i
-            # We don't need to add a waypoint here because we are already at the location.
+            # Perform Pick operation (wait)
+            current_time += op['t_i']
+            # We are at the pick point, no movement, just time passing
+            # schedule.append((current_time, pick_point[0], pick_point[1], pick_point[2]))
 
-            # 3. Move from the PICK point to the PLACE point
-            dist_to_place = math.sqrt(
-                (op.pick_pos.x - op.place_pos.x)**2 +
-                (op.pick_pos.y - op.place_pos.y)**2 +
-                (op.pick_pos.z - op.place_pos.z)**2
-            )
+            # Move to Place
+            dist_to_place = math.sqrt(sum((a - b) ** 2 for a, b in zip(pick_point, place_point)))
             time_to_place = calculate_move_time(dist_to_place, v_max, a_max)
             current_time += time_to_place
-            # Add the arrival at the Place point to the schedule
-            schedule.append(Waypoint(t=current_time, x=op.place_pos.x, y=op.place_pos.y, z=op.place_pos.z))
+            schedule.append((current_time, place_point[0], place_point[1], place_point[2]))
 
-            # 4. Perform the Place operation (wait at the place point)
-            current_time += op.t_i
+            # Perform Place operation (wait)
+            current_time += op['t_i']
+            # schedule.append((current_time, place_point[0], place_point[1], place_point[2]))
 
-            # Update the current position for the next operation
-            current_pos = op.place_pos
+            current_pos = place_point
 
-        # After planning all operations, save the schedule and makespan to the robot object
-        robot.schedule = schedule
-        robot.makespan = current_time
+        robot['schedule'] = schedule
+        robot['makespan'] = current_time  # Individual robot finish time
