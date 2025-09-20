@@ -337,6 +337,7 @@
         let currentSimulationTime = 0;
         let simulationSpeed = 1.0;
         let isPlaying = false;
+        let uploadedFileContent = null;
         
         // File upload handling
         fileUploadArea.addEventListener('click', () => {
@@ -345,8 +346,9 @@
         
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
-                fileName.textContent = e.target.files[0].name;
-                readFile(e.target.files[0]);
+                const file = e.target.files[0];
+                fileName.textContent = file.name;
+                readFile(file);
             }
         });
         
@@ -379,10 +381,11 @@
         function readFile(file) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                const content = e.target.result;
+                uploadedFileContent = e.target.result;
                 addLogEntry(`Loaded file: ${file.name}`);
-                // Here you would process the input file content
-                // For now, we'll just display a success message
+            };
+            reader.onerror = (e) => {
+                addLogEntry('Error reading file');
             };
             reader.readAsText(file);
         }
@@ -400,16 +403,57 @@
         });
         
         // Control buttons
-        runSchedulerBtn.addEventListener('click', () => {
+        runSchedulerBtn.addEventListener('click', async () => {
+            if (!uploadedFileContent) {
+                addLogEntry('Please upload a file first');
+                return;
+            }
+            
             addLogEntry('Running scheduler...');
-            // Simulate connecting to backend
-            simulateBackendConnection();
+            try {
+                const result = await runScheduler(uploadedFileContent);
+                
+                if (result.success) {
+                    addLogEntry('Scheduler completed successfully');
+                    
+                    // Parse the output for visualization
+                    const visualizationResult = await parseOutputForVisualization(result.schedule);
+                    
+                    if (visualizationResult.success) {
+                        simulationData = visualizationResult.visualization_data;
+                        updateUIWithSimulationData(simulationData, result.metadata);
+                        updateVisualization();
+                    } else {
+                        addLogEntry('Error parsing output for visualization');
+                    }
+                } else {
+                    addLogEntry(`Scheduler error: ${result.error}`);
+                }
+            } catch (error) {
+                addLogEntry(`Failed to run scheduler: ${error.message}`);
+            }
         });
         
         loadExampleBtn.addEventListener('click', () => {
             addLogEntry('Loading example scenario...');
-            // Load example data
-            simulateExampleData();
+            // Example input.txt content for 2 robots
+            const exampleContent = `2 3
+0.0 0.0 0.0
+2.5 0.0 0.0
+-170.0 170.0 100.0 500.0
+-120.0 120.0 90.0 450.0
+-170.0 170.0 100.0 500.0
+-120.0 120.0 90.0 450.0
+-270.0 270.0 180.0 720.0
+-270.0 270.0 180.0 720.0
+0.25 0.5
+1.0 1.0 0.5  1.5 1.5 0.5  2.0
+0.5 2.0 0.8  2.0 2.0 0.8  1.5
+2.0 1.0 0.6  0.5 1.5 0.6  2.5`;
+            
+            uploadedFileContent = exampleContent;
+            fileName.textContent = 'example_input.txt';
+            addLogEntry('Example scenario loaded. Click "Run Scheduler" to process.');
         });
         
         playBtn.addEventListener('click', () => {
@@ -455,6 +499,63 @@
             addLogEntry('EMERGENCY STOP activated');
         });
         
+        // API functions
+        async function runScheduler(scenarioContent) {
+            try {
+                const response = await fetch('/api/run_scheduler', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ scenario: scenarioContent })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('Error running scheduler:', error);
+                throw error;
+            }
+        }
+        
+        async function parseOutputForVisualization(outputContent) {
+            try {
+                const response = await fetch('/api/parse_output', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ output_content: outputContent })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                console.error('Error parsing output:', error);
+                throw error;
+            }
+        }
+        
+        // Update UI with simulation data
+        function updateUIWithSimulationData(visualizationData, metadata) {
+            robotsCount.textContent = visualizationData.robots.length;
+            operationsCount.textContent = metadata.num_operations || 0;
+            makespan.textContent = `${visualizationData.makespan} ms`;
+            collisionsCount.textContent = metadata.collisions_detected || 0;
+            
+            // Set time slider max value
+            timeSlider.max = visualizationData.makespan;
+            
+            connected = true;
+            updateConnectionStatus();
+        }
+        
         // Animation function
         function animate() {
             if (!isPlaying) return;
@@ -489,8 +590,8 @@
             // Draw robots and paths based on current time
             drawRobotsAndPaths();
             
-            // Update active robots count (simulated)
-            activeRobots.textContent = Math.min(2, Math.floor(currentSimulationTime / 200));
+            // Update active robots count
+            updateActiveRobotsCount();
         }
         
         // Draw grid on canvas
@@ -528,6 +629,7 @@
                 
                 for (let i = 0; i < robot.waypoints.length; i++) {
                     const wp = robot.waypoints[i];
+                    // Scale coordinates to fit canvas
                     const x = (wp.x / 3.0) * canvas.width * 0.8 + canvas.width * 0.1;
                     const y = canvas.height - ((wp.y / 3.0) * canvas.height * 0.8 + canvas.height * 0.1);
                     
@@ -552,6 +654,7 @@
                     }
                 }
                 
+                // If no waypoint found, use the last one
                 if (!currentWp && robot.waypoints.length > 0) {
                     currentWp = robot.waypoints[robot.waypoints.length - 1];
                 }
@@ -579,72 +682,22 @@
             });
         }
         
-        // Simulate backend connection
-        function simulateBackendConnection() {
-            connected = true;
-            updateConnectionStatus();
-            addLogEntry('Connected to backend');
+        // Update active robots count
+        function updateActiveRobotsCount() {
+            if (!simulationData || !simulationData.robots) return;
             
-            // Simulate receiving data after a delay
-            setTimeout(() => {
-                simulateExampleData();
-                addLogEntry('Scheduler completed successfully');
-            }, 1500);
-        }
-        
-        // Simulate example data
-        function simulateExampleData() {
-            simulationData = {
-                robots: [
-                    {
-                        id: 'R1',
-                        color: '#FF6B6B',
-                        waypoints: [
-                            { time: 0, x: 0.0, y: 0.0, z: 0.0 },
-                            { time: 500, x: 1.0, y: 1.0, z: 0.5 },
-                            { time: 1000, x: 1.5, y: 1.5, z: 0.5 },
-                            { time: 2000, x: 2.0, y: 2.0, z: 0.5 }
-                        ]
-                    },
-                    {
-                        id: 'R2',
-                        color: '#4ECDC4',
-                        waypoints: [
-                            { time: 0, x: 2.5, y: 0.0, z: 0.0 },
-                            { time: 300, x: 0.5, y: 2.0, z: 0.8 },
-                            { time: 800, x: 2.0, y: 2.0, z: 0.8 },
-                            { time: 1500, x: 1.5, y: 1.5, z: 0.8 }
-                        ]
-                    },
-                    {
-                        id: 'R3',
-                        color: '#45B7D1',
-                        waypoints: [
-                            { time: 0, x: 1.0, y: 2.5, z: 0.0 },
-                            { time: 400, x: 2.0, y: 1.0, z: 0.6 },
-                            { time: 900, x: 0.5, y: 1.5, z: 0.6 },
-                            { time: 2500, x: 1.5, y: 0.5, z: 0.6 }
-                        ]
+            let count = 0;
+            simulationData.robots.forEach(robot => {
+                // Check if robot has waypoints that are within the current time
+                for (let i = 0; i < robot.waypoints.length; i++) {
+                    if (robot.waypoints[i].time <= currentSimulationTime) {
+                        count++;
+                        break;
                     }
-                ],
-                makespan: 2500,
-                operations: 12,
-                collisions: 0
-            };
+                }
+            });
             
-            // Update UI with simulation data
-            robotsCount.textContent = simulationData.robots.length;
-            operationsCount.textContent = simulationData.operations;
-            makespan.textContent = `${simulationData.makespan} ms`;
-            collisionsCount.textContent = simulationData.collisions;
-            
-            // Set time slider max value
-            timeSlider.max = simulationData.makespan;
-            
-            // Update visualization
-            updateVisualization();
-            
-            addLogEntry('Simulation data loaded');
+            activeRobots.textContent = count;
         }
         
         // Update connection status UI
