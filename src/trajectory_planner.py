@@ -5,14 +5,6 @@ def plan_trajectory(robot, operations, v_max, a_max):
     """
     Plans a path for a single robot through its list of assigned operations.
     Generates a schedule of (time, x, y, z) waypoints.
-    Args:
-        robot: The robot dictionary. Must have 'id', 'base_x', 'base_y', 'base_z'.
-        operations: The list of operations (pick/place) assigned to this robot.
-                   Each operation is a dict: {'pick_x','pick_y','pick_z','place_x','place_y','place_z','t_i'}
-        v_max: Maximum velocity (m/s)
-        a_max: Maximum acceleration (m/s²)
-    Returns:
-        list: A schedule of waypoints [(t0, x0, y0, z0), (t1, x1, y1, z1), ...]
     """
     print(f"DEBUG: Planning trajectory for robot {robot.get('id', 'unknown')}")
     print(f"DEBUG: Robot base position: {robot.get('base_x', 0)}, {robot.get('base_y', 0)}, {robot.get('base_z', 0)}")
