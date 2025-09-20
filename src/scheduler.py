@@ -22,10 +22,22 @@ def calculate_move_time(distance, v_max, a_max):
         t_total = 2 * t_acc + t_cruise
     return t_total
 
+# In your scheduler.py, add debug output
 def assign_operations(robots, operations):
     """
-    A smarter task allocator. Assigns each operation to the closest robot.
+    Assigns operations to robots based on some criteria.
+    Add debug output to see what's happening.
     """
+    print(f"DEBUG: assign_operations called with {len(robots)} robots and {len(operations)} operations")
+    
+    for i, robot in enumerate(robots):
+        print(f"DEBUG: Robot {i}: {robot}")
+    
+    for i, op in enumerate(operations):
+        print(f"DEBUG: Operation {i}: {op}")
+    
+    # Your existing assignment logic here
+    # ...
     from collections import deque
     # Convert to a list we can process
     op_queue = deque(operations)
