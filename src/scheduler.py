@@ -22,22 +22,18 @@ def calculate_move_time(distance, v_max, a_max):
 
 def assign_operations(robots, operations):
     """
-    Simple assignment: assign each operation to the robot closest to its pick-up point.
-    Modifies the robots list in-place.
+    Assigns each operation to the robot with the fewest existing tasks.
+    This helps balance the load.
     """
     for op in operations:
-        pick_point = (op['pick_x'], op['pick_y'], op['pick_z'])
-        min_dist = float('inf')
+        # Find the robot with the minimum number of assigned operations
+        min_ops = float('inf')
         best_robot = None
-
         for robot in robots:
-            robot_pos = (robot['base_x'], robot['base_y'], robot['base_z'])
-            # Calculate Euclidean distance
-            dist = math.sqrt(sum((a - b) ** 2 for a, b in zip(pick_point, robot_pos)))
-            if dist < min_dist:
-                min_dist = dist
+            if len(robot['operations']) < min_ops:
+                min_ops = len(robot['operations'])
                 best_robot = robot
-
+        # Assign the operation to this robot
         best_robot['operations'].append(op)
 
 def plan_paths(robots, v_max, a_max):
