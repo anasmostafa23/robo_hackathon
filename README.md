@@ -16,8 +16,8 @@ robotics-hackathon-2025/
 
 1. **Клонировать репозиторий:**
     ```bash
-    git clone https://github.com/your-username/your-repo-name.git
-    cd your-repo-name
+    git clone https://github.com/anasmostafa23/robo_hackathon.git
+    cd robo_hackathon
     ```
 
 2. **Создайте виртуальную среду (настоятельно рекомендуется):**
