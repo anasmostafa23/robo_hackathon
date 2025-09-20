@@ -4,6 +4,7 @@ from scheduler import assign_operations, plan_paths
 from collision_checker import check_collisions, prevent_collisions_by_staggered_start
 from output_generator import write_output
 import sys
+import os
 
 def main(input_filename):
     print("Parsing input...")
@@ -21,8 +22,16 @@ def main(input_filename):
     # Make sure to pass v_max_linear to the function!
     prevent_collisions_by_staggered_start(robots, tool_clearance, safe_dist, v_max_linear)
 
-    print("Writing output file 'output.txt'...")
-    write_output(robots)
+    print("Writing output file...")
+    # Determine the correct output path
+    if input_filename.startswith('data/'):
+        output_file_path = input_filename.replace('input.txt', 'output.txt')
+    else:
+        # Get the project root directory (one level up from src/)
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+        output_file_path = os.path.join(project_root, 'data', 'output.txt')
+    
+    write_output(robots, output_file_path)  # You'll need to modify write_output to accept a path
 
     print("Done!")
 

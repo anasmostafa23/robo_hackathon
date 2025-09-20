@@ -1,18 +1,28 @@
 # output_generator.py
-def write_output(robots, output_filename='output.txt'):
+def write_output(robots, output_file_path='output.txt'):
     """
-    Writes the output file in the required format.
+    Write the schedule to an output file.
+    
+    Args:
+        robots: List of Robot objects with their scheduled waypoints
+        output_file_path: Path to the output file (default: 'output.txt')
     """
-    global_makespan = max(robot['makespan'] for robot in robots)
-    with open(output_filename, 'w') as f:
-        # Write total makespan (convert seconds to milliseconds)
-        f.write(f"{int(global_makespan * 1000)}\n")
+    with open(output_file_path, 'w') as f:
+        # Calculate makespan (maximum end time among all robots)
+        makespan = 0
         for robot in robots:
-            schedule = robot['schedule']
-            # Write robot header: e.g., "R1 5"
-            f.write(f"{robot['id']} {len(schedule)}\n")
-            # Write each waypoint: time_ms x y z
-            for point in schedule:
-                time_sec, x, y, z = point
-                time_ms = int(time_sec * 1000)
-                f.write(f"{time_ms} {x:.3f} {y:.3f} {z:.3f}\n")
+            if robot.waypoints:
+                makespan = max(makespan, robot.waypoints[-1].time)
+        
+        # Write makespan (in milliseconds)
+        f.write(f"{makespan * 1000:.6f}\n")
+        
+        # Write each robot's schedule
+        for i, robot in enumerate(robots):
+            robot_id = i + 1
+            f.write(f"R{robot_id} {len(robot.waypoints)}\n")
+            
+            for wp in robot.waypoints:
+                # Convert time to milliseconds for output
+                time_ms = wp.time * 1000
+                f.write(f"{time_ms:.6f} {wp.x:.6f} {wp.y:.6f} {wp.z:.6f}\n")
