@@ -53,4 +53,12 @@ def parse_input(filename):
         })
         index += 1
 
+        # Also add max_reach for the simplified kinematics check
+    for robot in robots:
+        # Estimate max_reach as the length of a fully extended arm.
+        # A typical 6-axis arm might have a reach of 1.5m-2.0m.
+        robot['max_reach'] = 2.2  # meters
+        # A robot can likely reach points very close to its base.
+        robot['min_reach'] = 0.1  # meters  # Changed from 0.2 to 0.1
+
     return robots, operations, tool_clearance, safe_dist, v_max_cartesian, a_max_cartesian

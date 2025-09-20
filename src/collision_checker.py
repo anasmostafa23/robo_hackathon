@@ -30,13 +30,27 @@ def check_collisions(robots, tool_clearance, safe_dist, time_step=0.1):
     global_makespan = max(robot['makespan'] for robot in robots)
     min_safe_distance = tool_clearance + safe_dist + tool_clearance  # Robot1 radius + gap + Robot2 radius
 
+    # Print the safety parameters for clarity
+    print(f"DEBUG: Tool Clearance: {tool_clearance}m, Safe Distance: {safe_dist}m")
+    print(f"DEBUG: Minimum required distance between robot centers: {min_safe_distance}m")
+
     t = 0
+    # only run the detailed debug for the first few timesteps to avoid too much output
+    debug_max_time = 0.2
+    detailed_debug = True
+
     while t < global_makespan:
         positions = {}
         # Get all robot positions at time t
         for robot in robots:
             pos = get_position_at_time(robot['schedule'], t)
             positions[robot['id']] = pos
+
+        # NEW: Detailed debug printing for the start of the simulation
+        if detailed_debug and t <= debug_max_time:
+            print(f"\nDEBUG: Time = {t:.6f}s")
+            for robot_id, pos in positions.items():
+                print(f"DEBUG:   {robot_id} position: ({pos[0]:.6f}, {pos[1]:.6f}, {pos[2]:.6f})")
 
         # Check all pairs of robots
         robot_ids = list(positions.keys())
@@ -48,9 +62,32 @@ def check_collisions(robots, tool_clearance, safe_dist, time_step=0.1):
                 pos_j = positions[id_j]
                 # Calculate Euclidean distance
                 distance = math.sqrt(sum((a - b) ** 2 for a, b in zip(pos_i, pos_j)))
+                
+                # NEW: Print distance calculation for the first few timesteps
+                if detailed_debug and t <= debug_max_time:
+                    print(f"DEBUG:   Distance between {id_i} and {id_j}: {distance:.6f}m")
+
                 if distance < min_safe_distance:
+                    # NEW: Print a clear message when a collision is detected
+                    print(f"DEBUG:   COLLISION DETECTED! {distance:.6f}m < {min_safe_distance}m")
                     collision_events.append((t, id_i, id_j))
+        
+        # NEW: After the first few timesteps, turn off detailed debug to avoid too much output
+        if t > debug_max_time:
+            detailed_debug = False
+
         t += time_step
+
+    # NEW: Print a summary of what was found
+    if collision_events:
+        print(f"\nDEBUG: Found {len(collision_events)} potential collision events.")
+        # Print just the first few collisions to avoid spam
+        for i, (collision_time, robot_i, robot_j) in enumerate(collision_events[:3]):
+            print(f"DEBUG: Collision #{i+1}: at t={collision_time:.6f}s between {robot_i} and {robot_j}")
+        if len(collision_events) > 3:
+            print(f"DEBUG: ... and {len(collision_events) - 3} more collisions")
+    else:
+        print("\nDEBUG: No collisions detected in the detailed check.")
 
     return collision_events
 

@@ -24,19 +24,29 @@ def calculate_move_time(distance, v_max, a_max):
 
 def assign_operations(robots, operations):
     """
-    Assigns each operation to the robot with the fewest existing tasks.
-    This helps balance the load.
+    A smarter task allocator. Assigns each operation to the closest robot.
     """
-    for op in operations:
-        # Find the robot with the minimum number of assigned operations
-        min_ops = float('inf')
+    from collections import deque
+    # Convert to a list we can process
+    op_queue = deque(operations)
+    
+    while op_queue:
+        op = op_queue.popleft()
         best_robot = None
+        best_distance = float('inf')
+        
+        # Find the robot whose base is closest to the PICK point of this operation
+        pick_point = (op['pick_x'], op['pick_y'], op['pick_z'])
         for robot in robots:
-            if len(robot['operations']) < min_ops:
-                min_ops = len(robot['operations'])
+            base_point = (robot['base_x'], robot['base_y'], robot['base_z'])
+            distance = math.sqrt(sum((a - b) ** 2 for a, b in zip(base_point, pick_point)))
+            if distance < best_distance:
+                best_distance = distance
                 best_robot = robot
-        # Assign the operation to this robot
+                
+        # Assign the operation to the closest robot
         best_robot['operations'].append(op)
+        print(f"Assigned operation (Pick: {pick_point}) to {best_robot['id']} (distance: {best_distance:.2f}m)")
 
 def plan_paths(robots, v_max, a_max):
     """
