@@ -69,33 +69,3 @@ def resolve_collisions(robots, collision_events):
         print("No collisions detected. Good job!")
 
 
-# DELAY FUNCTION
-
-def delay_schedule(schedule, delay):
-    """
-    Adds a fixed delay to all time points in a schedule.
-    """
-    return [(t + delay, x, y, z) for (t, x, y, z) in schedule]
-
-def resolve_first_collision(robots, collision_events, delay=2.0):
-    """
-    Resolves the first collision by delaying the second robot's schedule.
-    Modifies the robots list in place.
-    """
-    if not collision_events:
-        print("No collisions detected. Good job!")
-        return
-
-    # Take the first collision event
-    first_collision = collision_events[0]
-    t, id_i, id_j = first_collision
-
-    print(f"First collision detected at {t:.2f}s between {id_i} and {id_j}.")
-    print(f"Delaying robot {id_j}'s schedule by {delay} seconds.")
-
-    # Find the second robot and delay its schedule
-    for robot in robots:
-        if robot['id'] == id_j:
-            robot['schedule'] = delay_schedule(robot['schedule'], delay)
-            robot['makespan'] += delay
-            break
