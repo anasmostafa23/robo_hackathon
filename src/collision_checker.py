@@ -54,10 +54,8 @@ def check_collisions(robots, tool_clearance, safe_dist, time_step=0.1):
 
     return collision_events
 
-# --- A VERY SIMPLE COLLISION RESOLUTION ---
-# This is a placeholder. A better method would be to insert deliberate waits.
 # For the prototype, we will just print a warning.
-# Person 2 can later improve this by implementing a delay-insertion algorithm.
+
 def resolve_collisions(robots, collision_events):
     """
     Simple resolver: just prints warnings.
