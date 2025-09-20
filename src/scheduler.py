@@ -39,7 +39,7 @@ def assign_operations(robots, operations):
 def plan_paths(robots, v_max, a_max):
     """
     For each robot, plan its path by calculating waypoints and timings.
-    Adds 'schedule' key to each robot, which is a list of (time, x, y, z) waypoints.
+    
     """
     for robot in robots:
         schedule = []
