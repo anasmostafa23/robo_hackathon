@@ -56,7 +56,7 @@ def check_collisions(robots, tool_clearance, safe_dist, time_step=0.1):
 
 # resolving collisions by adding delay timestamps
 
-def resolve_collisions(robots, collision_events):
+def resolve_collisions(robots, collision_events, tool_clearance, safe_dist):
     """
     Simple resolver: Adds a fixed delay to the second robot's entire schedule.
     """
