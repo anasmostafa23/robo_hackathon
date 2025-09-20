@@ -8,7 +8,7 @@ This project provides a complete solution for:
 - **Input parsing** of robot configurations and operations
 - **Operation scheduling** for multiple industrial robots
 - **Collision detection and prevention** in shared workspaces
-- **3D visualization** of robot trajectories
+- **2D visualization** of robot trajectories
 - **Web-based interface** for simulation control
 
 The system efficiently schedules operations for multiple robots while ensuring they don't collide, and provides a visual interface to monitor and control the simulation.
@@ -61,7 +61,7 @@ robotics-hackathon-2025/
 3. **Run the application**:
    ```bash
    # Method 1: Command line
-   python src/main.py data/input.txt
+   python src/main.py
    
    # Method 2: Web interface
    python src/app.py
@@ -188,8 +188,8 @@ R2 23
 
 ## 🚦 Performance
 
-- Handles scenarios with 2-6 robots efficiently
-- Processes 10-50 operations in reasonable time
-- Real-time visualization for up to 1000 waypoints
+- Handles scenarios with 2 robots efficiently
+- Processes 3-6 operations in reasonable time
+- Real-time visualization for up to 500 waypoints
 - Collision detection at 10ms resolution
 
