@@ -16,7 +16,9 @@ def main(input_filename):
 
     print("Checking for collisions...")
     collisions = check_collisions(robots, tool_clearance, safe_dist)
-    resolve_collisions(robots, collisions, tool_clearance, safe_dist) # Currently just prints warnings
+    print("Applying proactive collision prevention...")
+    # Make sure to pass v_max_linear to the function!
+    prevent_collisions_by_staggered_start(robots, tool_clearance, safe_dist, v_max_linear)
 
     print("Writing output file 'output.txt'...")
     write_output(robots)

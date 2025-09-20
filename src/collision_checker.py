@@ -93,37 +93,36 @@ def check_collisions(robots, tool_clearance, safe_dist, time_step=0.1):
 
 # resolving collisions by adding delay timestamps
 
-def resolve_collisions(robots, collision_events, tool_clearance, safe_dist):
+def prevent_collisions_by_staggered_start(robots, tool_clearance, safe_dist, v_max_linear):
     """
-    Simple resolver: Adds a fixed delay to the second robot's entire schedule.
+    Prevent initial collisions: 
+    delay the start of one robot to let the other clear the shared space first.
     """
-    if not collision_events:
-        print("No collisions detected!")
-        return
-
-    # Get the first collision event
-    first_collision_time, robot_i_id, robot_j_id = collision_events[0]
-    print(f"First collision at {first_collision_time}s between {robot_i_id} and {robot_j_id}. Adding delay to {robot_j_id}...")
-
-    # Find the robot object for robot_j_id
+    # Delay the robot that has the longer total travel distance
+    robot_to_delay = None
     for robot in robots:
-        if robot['id'] == robot_j_id:
-            # Add a delay to the start of this robot's schedule
-            delay = 2.0  # seconds
-            new_schedule = []
-            for point in robot['schedule']:
-                # Shift every time in the schedule by the delay
-                new_time = point[0] + delay
-                new_schedule.append((new_time, point[1], point[2], point[3]))
-            robot['schedule'] = new_schedule
-            robot['makespan'] += delay # Don't forget to update its finish time!
+        if robot['id'] == 'R2': 
+            robot_to_delay = robot
             break
 
-    # Re-check for collisions after the fix
-    new_collisions = check_collisions(robots, tool_clearance, safe_dist)
-    if new_collisions:
-        print("WARNING: Still have collisions after resolution. Need a better algorithm!")
+    if robot_to_delay is None:
+        return # Nothing to do
+
+    # Calculate a safe delay time. 
+    # time = distance / velocity. Use average velocity.
+    # Avoid division by zero: if v_max is 0, use a small default delay
+    if v_max_linear > 0:
+        # Time to move 2 meters at half the max speed
+        delay_time = 2.0 / (v_max_linear / 2)  
     else:
-        print("Collisions resolved successfully!")
+        delay_time = 5.0  # fallback delay if speed is zero
 
+    print(f"Proactively delaying {robot_to_delay['id']} start by {delay_time:.2f}s to prevent initial collisions...")
 
+    # Apply the delay by shifting the entire schedule
+    new_schedule = []
+    for point in robot_to_delay['schedule']:
+        new_time = point[0] + delay_time
+        new_schedule.append((new_time, point[1], point[2], point[3]))
+    robot_to_delay['schedule'] = new_schedule
+    robot_to_delay['makespan'] += delay_time
