@@ -3,6 +3,7 @@ from input_parser import parse_input
 from scheduler import assign_operations, plan_paths
 from collision_checker import check_collisions, prevent_collisions_by_staggered_start
 from output_generator import write_output
+import sys
 
 def main(input_filename):
     print("Parsing input...")
@@ -26,4 +27,9 @@ def main(input_filename):
     print("Done!")
 
 if __name__ == "__main__":
-    main('data\input.txt') # Run the program
+    # Allow running from command line with a filename argument
+    if len(sys.argv) > 1:
+        input_file = sys.argv[1]
+    else:
+        input_file = 'data/input.txt'  # default
+    main(input_file)
