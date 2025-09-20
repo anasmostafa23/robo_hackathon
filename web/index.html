@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Scheduler Visualizer</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <style>
+        :root {
+            --primary: #2c3e50;
+            --secondary: #3498db;
+            --success: #27ae60;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --light: #ecf0f1;
+            --dark: #34495e;
+        }
+        
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.2em;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            opacity: 0.8;
+            font-size: 1.1em;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 0;
+            height: 70vh;
+        }
+        
+        .control-panel {
+            background: var(--light);
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 2px solid #ddd;
+        }
+        
+        .section {
+            background: white;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .section h3 {
+            color: var(--primary);
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--secondary);
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: var(--dark);
+        }
+        
+        input[type="file"],
+        select,
+        button {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        
+        button {
+            background: var(--secondary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        button:hover {
+            background: var(--primary);
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .btn-primary { background: var(--secondary); }
+        .btn-success { background: var(--success); }
+        .btn-warning { background: var(--warning); }
+        .btn-danger { background: var(--danger); }
+        
+        .visualization-area {
+            position: relative;
+            background: #1a1a1a;
+        }
+        
+        #renderCanvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+        }
+        
+        .status-bar {
+            background: var(--dark);
+            color: white;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .stats {
+            display: flex;
+            gap: 20px;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 8px 15px;
+            border-radius: 6px;
+        }
+        
+        .legend {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+        }
+        
+        .color-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        
+        .controls-horizontal {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .controls-horizontal input[type="range"] {
+            flex: 1;
+        }
+        
+        .log-output {
+            background: #2c3e50;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            padding: 15px;
+            height: 120px;
+            overflow-y: auto;
+            font-size: 12px;
+            border-radius: 0 0 15px 15px;
+        }
+        
+        .collision-alert {
+            background: var(--danger);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            display: none;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background: #ddd;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--success);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        @media (max-width: 1000px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr;
+            }
+            
+            .control-panel {
+                border-right: none;
+                border-bottom: 2px solid #ddd;
+                max-height: 40vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Robot Scheduler Visualizer</h1>
+            <div class="subtitle">3D визуализация работы промышленных роботов</div>
+        </header>
+        
+        <div class="main-content">
+            <div class="control-panel">
+                <div class="section">
+                    <h3>📁 Управление сценариями</h3>
+                    <div class="form-group">
+                        <label for="scenarioInput">Загрузить файл сценария:</label>
+                        <input type="file" id="scenarioInput" accept=".txt">
+                    </div>
+                    <div class="form-group">
+                        <label for="scenarioSelect">Примеры сценариев:</label>
+                        <select id="scenarioSelect">
+                            <option value="">Выберите пример...</option>
+                        </select>
+                    </div>
+                    <button id="btnRunScheduler" class="btn-primary">🚀 Запустить планировщик</button>
+                    <button id="btnLoadDemo" class="btn-warning">📊 Загрузить демо</button>
+                </div>
+                
+                <div class="section">
+                    <h3>🎬 Управление визуализацией</h3>
+                    <div class="form-group">
+                        <label for="timeRange">Время: <span id="timeLabel">0 ms</span></label>
+                        <input type="range" id="timeRange" min="0" max="1000" value="0">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                    </div>
+                    <div class="controls-horizontal">
+                        <button id="btnPlay" class="btn-success">▶ Воспроизвести</button>
+                        <button id="btnPause" class="btn-warning" disabled>⏸ Пауза</button>
+                        <button id="btnReset" class="btn-danger">⏹ Сброс</button>
+                    </div>
+                    <div class="form-group">
+                        <label for="speedSelect">Скорость воспроизведения:</label>
+                        <select id="speedSelect">
+                            <option value="0.25">0.25x</option>
+                            <option value="0.5">0.5x</option>
+                            <option value="1" selected>1x</option>
+                            <option value="2">2x</option>
+                            <option value="4">4x</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>⚙️ Настройки отображения</h3>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="showSafetyZones" checked>
+                            Показывать зоны безопасности
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="showTrajectories" checked>
+                            Показывать траектории
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="showWaypoints" checked>
+                            Показывать точки пути
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="section">
+                    <h3>📊 Информация о системе</h3>
+                    <div id="systemInfo">
+                        <p>Загрузите сценарий для начала работы</p>
+                    </div>
+                    <div class="collision-alert" id="collisionAlert">
+                        ⚠️ Обнаружены столкновения!
+                    </div>
+                </div>
+            </div>
+            
+            <div class="visualization-area">
+                <canvas id="renderCanvas"></canvas>
+            </div>
+        </div>
+        
+        <div class="status-bar">
+            <div class="stats">
+                <div class="stat-item" id="statRobots">🤖 Роботов: 0</div>
+                <div class="stat-item" id="statOperations">📦 Операций: 0</div>
+                <div class="stat-item" id="statMakespan">⏱ Makespan: 0 ms</div>
+                <div class="stat-item" id="statCollisions">⚠️ Столкновений: 0</div>
+            </div>
+            <div class="legend" id="robotLegend"></div>
+        </div>
+        
+        <div class="log-output" id="logOutput">
+            > Система инициализирована. Готов к работе.
+        </div>
+    </div>
+
+    <script>
+    // In visualizer.html, inside the <script> tag
+
+// API interaction functions
+async function runScheduler(scenarioContent) {
+    try {
+        const response = await fetch('/api/run_scheduler', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ scenario: scenarioContent })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || 'Scheduler failed');
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('Scheduler error:', error);
+        throw error;
+    }
+}
+
+async function parseOutputForVisualization(outputContent) {
+    try {
+        const response = await fetch('/api/parse_output', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ output_content: outputContent })
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.error || 'Output parsing failed');
+        }
+        
+        return result;
+    } catch (error) {
+        console.error('Output parsing error:', error);
+        throw error;
+    }
+}
+
+async function loadScenarios() {
+    try {
+        const response = await fetch('/api/scenarios');
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error('Failed to load scenarios');
+        }
+        
+        return result.scenarios;
+    } catch (error) {
+        console.error('Scenario loading error:', error);
+        return [];
+    }
+}
+
+// Integration with your existing UI
+document.getElementById('btnRunScheduler').addEventListener('click', async () => {
+    const scenarioContent = document.getElementById('scenarioInput').value;
+    
+    if (!scenarioContent) {
+        alert('Please load a scenario first');
+        return;
+    }
+    
+    try {
+        const result = await runScheduler(scenarioContent);
+        
+        // Update UI with results
+        document.getElementById('statRobots').textContent = `🤖 Robots: ${result.metadata.num_robots}`;
+        document.getElementById('statOperations').textContent = `📦 Operations: ${result.metadata.num_operations}`;
+        document.getElementById('statMakespan').textContent = `⏱ Makespan: ${result.makespan} ms`;
+        document.getElementById('statCollisions').textContent = `⚠️ Collisions: ${result.metadata.collisions_detected}`;
+        
+        // Parse output for visualization
+        const visualizationData = await parseOutputForVisualization(result.schedule);
+        initializeVisualization(visualizationData);
+        
+    } catch (error) {
+        alert(`Scheduler error: ${error.message}`);
+    }
+});
+    </script>
+</body>
+</html>
