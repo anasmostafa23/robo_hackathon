@@ -54,18 +54,39 @@ def check_collisions(robots, tool_clearance, safe_dist, time_step=0.1):
 
     return collision_events
 
-# For the prototype, we will just print a warning.
+# resolving collisions by adding delay timestamps
 
 def resolve_collisions(robots, collision_events):
     """
-    Simple resolver: just prints warnings.
-    A real implementation would modify the robots' schedules (e.g., add delay to one robot).
+    Simple resolver: Adds a fixed delay to the second robot's entire schedule.
     """
-    if collision_events:
-        print(f"WARNING: Found {len(collision_events)} potential collision events!")
-        for t, id_i, id_j in collision_events:
-            print(f"Time {t:.2f}s: {id_i} and {id_j} are too close.")
+    if not collision_events:
+        print("No collisions detected!")
+        return
+
+    # Get the first collision event
+    first_collision_time, robot_i_id, robot_j_id = collision_events[0]
+    print(f"First collision at {first_collision_time}s between {robot_i_id} and {robot_j_id}. Adding delay to {robot_j_id}...")
+
+    # Find the robot object for robot_j_id
+    for robot in robots:
+        if robot['id'] == robot_j_id:
+            # Add a delay to the start of this robot's schedule
+            delay = 2.0  # seconds
+            new_schedule = []
+            for point in robot['schedule']:
+                # Shift every time in the schedule by the delay
+                new_time = point[0] + delay
+                new_schedule.append((new_time, point[1], point[2], point[3]))
+            robot['schedule'] = new_schedule
+            robot['makespan'] += delay # Don't forget to update its finish time!
+            break
+
+    # Re-check for collisions after the fix
+    new_collisions = check_collisions(robots, tool_clearance, safe_dist)
+    if new_collisions:
+        print("WARNING: Still have collisions after resolution. Need a better algorithm!")
     else:
-        print("No collisions detected. Good job!")
+        print("Collisions resolved successfully!")
 
 
