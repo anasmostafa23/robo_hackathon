@@ -5,17 +5,25 @@ import os
 import subprocess
 import sys
 import json
+import traceback
 
-# Add the src directory to the path so we can import our modules
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+# Add the current directory to the path so we can import our modules
+sys.path.append(os.path.dirname(__file__))
 
 app = Flask(__name__)
 CORS(app)  # This allows your frontend to talk to the backend
 
+# Create required directories if they don't exist
+os.makedirs('data', exist_ok=True)
+os.makedirs('web', exist_ok=True)
+
 # Serve the main visualizer page
 @app.route('/')
 def serve_visualizer():
-    return send_from_directory('web', 'index.html')
+    try:
+        return send_from_directory('web', 'index.html')
+    except Exception as e:
+        return f"Error serving index.html: {str(e)}. Make sure you have a 'web' directory with index.html."
 
 # Serve static files from the web directory (CSS, JS, etc.)
 @app.route('/<path:path>')
@@ -26,6 +34,7 @@ def serve_static(path):
 @app.route('/api/run_scheduler', methods=['POST'])
 def api_run_scheduler():
     try:
+        print("Received request to run scheduler")
         data = request.get_json()
         if not data or 'scenario' not in data:
             return jsonify({'error': 'No scenario content provided'}), 400
@@ -34,30 +43,49 @@ def api_run_scheduler():
         
         # Save the scenario content to input.txt
         input_file_path = os.path.join('data', 'input.txt')
-        with open(input_file_path, 'w') as f:
-            f.write(scenario_content)
+        try:
+            with open(input_file_path, 'w') as f:
+                f.write(scenario_content)
+            print(f"Saved scenario to {input_file_path}")
+        except Exception as e:
+            return jsonify({'error': f'Failed to write input file: {str(e)}'}), 500
         
         print("Running scheduler with provided scenario...")
         
         # Run your main.py logic
-        result = subprocess.run([
-            sys.executable, 'main.py', input_file_path
-        ], capture_output=True, text=True, cwd=os.getcwd())
+        try:
+            result = subprocess.run([
+                sys.executable, 'main.py', input_file_path
+            ], capture_output=True, text=True, cwd=os.getcwd(), timeout=30)  # Added timeout
 
-        # Check if main.py ran successfully
-        if result.returncode != 0:
-            error_message = f"Backend error: {result.stderr}"
-            print(error_message)
-            return jsonify({'error': error_message}), 500
+            # Check if main.py ran successfully
+            if result.returncode != 0:
+                error_message = f"Backend error: {result.stderr}"
+                print(error_message)
+                return jsonify({'error': error_message}), 500
 
-        print("Simulation completed successfully!")
+            print("Simulation completed successfully!")
+            print("STDOUT:", result.stdout)
+            if result.stderr:
+                print("STDERR:", result.stderr)
+
+        except subprocess.TimeoutExpired:
+            return jsonify({'error': 'Scheduler timed out after 30 seconds'}), 500
+        except Exception as e:
+            return jsonify({'error': f'Failed to run scheduler: {str(e)}'}), 500
 
         # Read the generated output
         output_file_path = os.path.join('data', 'output.txt')
         output_data = ""
-        if os.path.exists(output_file_path):
-            with open(output_file_path, 'r') as f:
-                output_data = f.read()
+        try:
+            if os.path.exists(output_file_path):
+                with open(output_file_path, 'r') as f:
+                    output_data = f.read()
+                print(f"Read output from {output_file_path}")
+            else:
+                return jsonify({'error': 'Output file was not generated'}), 500
+        except Exception as e:
+            return jsonify({'error': f'Failed to read output file: {str(e)}'}), 500
         
         # Parse the output to extract metadata for the frontend
         metadata = parse_output_metadata(output_data)
@@ -70,7 +98,8 @@ def api_run_scheduler():
         })
 
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
+        print(f"Unexpected error in api_run_scheduler: {str(e)}")
+        print(traceback.format_exc())
         return jsonify({'error': f'Server error: {str(e)}'}), 500
 
 # API endpoint to parse output for visualization
@@ -115,80 +144,96 @@ def api_get_scenarios():
         print(f"Scenarios error: {str(e)}")
         return jsonify({'error': f'Scenarios error: {str(e)}'}), 500
 
+# Health check endpoint
+@app.route('/api/health', methods=['GET'])
+def api_health():
+    return jsonify({
+        'status': 'ok',
+        'message': 'Flask server is running'
+    })
+
 def parse_output_metadata(output_content):
     """Extract metadata from output file content"""
-    lines = output_content.strip().split('\n')
-    if not lines:
+    try:
+        lines = output_content.strip().split('\n')
+        if not lines:
+            return {'makespan': 0, 'num_robots': 0, 'num_operations': 0, 'collisions_detected': 0}
+        
+        makespan = float(lines[0].strip())
+        
+        # Count robots and waypoints
+        num_robots = 0
+        total_waypoints = 0
+        i = 1
+        while i < len(lines):
+            if lines[i].startswith('R'):
+                num_robots += 1
+                parts = lines[i].split()
+                if len(parts) >= 2:
+                    total_waypoints += int(parts[1])
+                i += int(parts[1]) + 1 if len(parts) >= 2 else 1
+            else:
+                i += 1
+        
+        return {
+            'makespan': makespan,
+            'num_robots': num_robots,
+            'num_operations': total_waypoints // 2,  # Rough estimate
+            'collisions_detected': 0  # You'll need to calculate this from your collision checker
+        }
+    except Exception as e:
+        print(f"Error parsing output metadata: {str(e)}")
         return {'makespan': 0, 'num_robots': 0, 'num_operations': 0, 'collisions_detected': 0}
-    
-    makespan = float(lines[0].strip())
-    
-    # Count robots and waypoints
-    num_robots = 0
-    total_waypoints = 0
-    i = 1
-    while i < len(lines):
-        if lines[i].startswith('R'):
-            num_robots += 1
-            parts = lines[i].split()
-            if len(parts) >= 2:
-                total_waypoints += int(parts[1])
-            i += int(parts[1]) + 1 if len(parts) >= 2 else 1
-        else:
-            i += 1
-    
-    return {
-        'makespan': makespan,
-        'num_robots': num_robots,
-        'num_operations': total_waypoints // 2,  # Rough estimate
-        'collisions_detected': 0  # You'll need to calculate this from your collision checker
-    }
 
 def parse_output_for_visualization(output_content):
     """Parse output file content for visualization data"""
-    lines = output_content.strip().split('\n')
-    if not lines:
-        return {'robots': [], 'makespan': 0}
-    
-    makespan = float(lines[0].strip())
-    robots = []
-    
-    i = 1
-    robot_id = 1
-    while i < len(lines):
-        if lines[i].startswith('R'):
-            parts = lines[i].split()
-            if len(parts) >= 2:
-                num_waypoints = int(parts[1])
-                waypoints = []
-                
-                for j in range(1, num_waypoints + 1):
-                    if i + j < len(lines):
-                        wp_parts = lines[i + j].split()
-                        if len(wp_parts) >= 4:
-                            waypoints.append({
-                                'time': float(wp_parts[0]),
-                                'x': float(wp_parts[1]),
-                                'y': float(wp_parts[2]),
-                                'z': float(wp_parts[3])
-                            })
-                
-                robots.append({
-                    'id': f'R{robot_id}',
-                    'waypoints': waypoints,
-                    'color': get_robot_color(robot_id)
-                })
-                robot_id += 1
-                i += num_waypoints + 1
+    try:
+        lines = output_content.strip().split('\n')
+        if not lines:
+            return {'robots': [], 'makespan': 0}
+        
+        makespan = float(lines[0].strip())
+        robots = []
+        
+        i = 1
+        robot_id = 1
+        while i < len(lines):
+            if lines[i].startswith('R'):
+                parts = lines[i].split()
+                if len(parts) >= 2:
+                    num_waypoints = int(parts[1])
+                    waypoints = []
+                    
+                    for j in range(1, num_waypoints + 1):
+                        if i + j < len(lines):
+                            wp_parts = lines[i + j].split()
+                            if len(wp_parts) >= 4:
+                                waypoints.append({
+                                    'time': float(wp_parts[0]),
+                                    'x': float(wp_parts[1]),
+                                    'y': float(wp_parts[2]),
+                                    'z': float(wp_parts[3])
+                                })
+                    
+                    robots.append({
+                        'id': f'R{robot_id}',
+                        'waypoints': waypoints,
+                        'color': get_robot_color(robot_id)
+                    })
+                    robot_id += 1
+                    i += num_waypoints + 1
+                else:
+                    i += 1
             else:
                 i += 1
-        else:
-            i += 1
-    
-    return {
-        'robots': robots,
-        'makespan': makespan
-    }
+        
+        return {
+            'robots': robots,
+            'makespan': makespan
+        }
+    except Exception as e:
+        print(f"Error parsing output for visualization: {str(e)}")
+        return {'robots': [], 'makespan': 0}
 
 def get_robot_color(robot_id):
     """Assign colors to robots for visualization"""
@@ -199,11 +244,8 @@ def get_robot_color(robot_id):
     return colors[(robot_id - 1) % len(colors)]
 
 if __name__ == '__main__':
-    # Create data directory if it doesn't exist
-    os.makedirs('data', exist_ok=True)
-    os.makedirs('web', exist_ok=True)
-    
     # Run the Flask app
     print("Starting Robotics Scheduler Server...")
     print("Open: http://localhost:5000")
+    print("API Health check: http://localhost:5000/api/health")
     app.run(debug=True, port=5000)
