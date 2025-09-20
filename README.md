@@ -15,10 +15,9 @@ The system efficiently schedules operations for multiple robots while ensuring t
 
 ## 🚀 Features
 
-- **Multi-Robot Support**: Schedule operations for 2+ industrial robots
 - **Collision Detection**: Real-time collision detection with safety margins
 - **Preventive Scheduling**: Proactive collision avoidance through staggered starts
-- **Web Visualization**: Interactive 3D visualization of robot movements
+- **Web Visualization**: Interactive visualization of robot movements
 - **RESTful API**: Flask-based backend for easy integration
 - **File Upload**: Support for custom scenario files
 - **Real-time Controls**: Play, pause, reset, and emergency stop functionality
