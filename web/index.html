@@ -353,12 +353,33 @@
     </div>
 
     <script>
-    // In visualizer.html, inside the <script> tag
+// Configuration
+const API_BASE = 'http://localhost:5000/api';
 
-// API interaction functions
+// DOM Elements
+const scenarioInput = document.getElementById('scenarioInput');
+const scenarioSelect = document.getElementById('scenarioSelect');
+const btnRunScheduler = document.getElementById('btnRunScheduler');
+const btnLoadDemo = document.getElementById('btnLoadDemo');
+const logOutput = document.getElementById('logOutput');
+
+// Initialize
+document.addEventListener('DOMContentLoaded', async () => {
+    log('System initialized. Ready to work.');
+    await loadScenarios();
+});
+
+// Logging function
+function log(message) {
+    logOutput.innerHTML += `> ${message}\n`;
+    logOutput.scrollTop = logOutput.scrollHeight;
+}
+
+// API functions
 async function runScheduler(scenarioContent) {
     try {
-        const response = await fetch('/api/run_scheduler', {
+        log('Running scheduler...');
+        const response = await fetch(`${API_BASE}/run_scheduler`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ scenario: scenarioContent })
@@ -370,16 +391,18 @@ async function runScheduler(scenarioContent) {
             throw new Error(result.error || 'Scheduler failed');
         }
         
+        log('Scheduler completed successfully!');
         return result;
     } catch (error) {
-        console.error('Scheduler error:', error);
+        log(`ERROR: ${error.message}`);
         throw error;
     }
 }
 
 async function parseOutputForVisualization(outputContent) {
     try {
-        const response = await fetch('/api/parse_output', {
+        log('Parsing output for visualization...');
+        const response = await fetch(`${API_BASE}/parse_output`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ output_content: outputContent })
@@ -393,33 +416,57 @@ async function parseOutputForVisualization(outputContent) {
         
         return result;
     } catch (error) {
-        console.error('Output parsing error:', error);
+        log(`ERROR: ${error.message}`);
         throw error;
     }
 }
 
 async function loadScenarios() {
     try {
-        const response = await fetch('/api/scenarios');
+        const response = await fetch(`${API_BASE}/scenarios`);
         const result = await response.json();
         
         if (!response.ok) {
             throw new Error('Failed to load scenarios');
         }
         
+        // Populate scenario dropdown
+        scenarioSelect.innerHTML = '<option value="">Select example...</option>';
+        result.scenarios.forEach(scenario => {
+            const option = document.createElement('option');
+            option.value = scenario.file;
+            option.textContent = scenario.name;
+            scenarioSelect.appendChild(option);
+        });
+        
         return result.scenarios;
     } catch (error) {
-        console.error('Scenario loading error:', error);
+        log(`ERROR: ${error.message}`);
         return [];
     }
 }
 
-// Integration with your existing UI
-document.getElementById('btnRunScheduler').addEventListener('click', async () => {
-    const scenarioContent = document.getElementById('scenarioInput').value;
+// File handling
+scenarioInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const content = e.target.result;
+            log(`File loaded: ${file.name}`);
+            // Store content for later use
+            scenarioInput.dataset.content = content;
+        };
+        reader.readAsText(file);
+    }
+});
+
+// Button event handlers
+btnRunScheduler.addEventListener('click', async () => {
+    let scenarioContent = scenarioInput.dataset.content;
     
     if (!scenarioContent) {
-        alert('Please load a scenario first');
+        log('ERROR: Please load a scenario file first');
         return;
     }
     
@@ -433,13 +480,50 @@ document.getElementById('btnRunScheduler').addEventListener('click', async () =>
         document.getElementById('statCollisions').textContent = `⚠️ Collisions: ${result.metadata.collisions_detected}`;
         
         // Parse output for visualization
-        const visualizationData = await parseOutputForVisualization(result.schedule);
-        initializeVisualization(visualizationData);
+        const visualizationResult = await parseOutputForVisualization(result.schedule);
+        initializeVisualization(visualizationResult.visualization_data);
         
     } catch (error) {
-        alert(`Scheduler error: ${error.message}`);
+        log(`Scheduler failed: ${error.message}`);
     }
 });
-    </script>
-</body>
-</html>
+
+btnLoadDemo.addEventListener('click', async () => {
+    const selectedFile = scenarioSelect.value;
+    if (!selectedFile) {
+        log('Please select a demo scenario');
+        return;
+    }
+    
+    try {
+        // For now, we'll create a simple demo content
+        const demoContent = `2 3
+0.0 0.0 0.0
+2.5 0.0 0.0
+-170.0 170.0 100.0 500.0
+-120.0 120.0 90.0 450.0
+-170.0 170.0 100.0 500.0
+-120.0 120.0 90.0 450.0
+-270.0 270.0 180.0 720.0
+-270.0 270.0 180.0 720.0
+0.25 0.5
+1.0 1.0 0.5 1.5 1.5 0.5 2.0
+0.5 2.0 0.8 2.0 2.0 0.8 1.5
+2.0 1.0 0.6 0.5 1.5 0.6 2.5`;
+        
+        scenarioInput.dataset.content = demoContent;
+        log('Demo scenario loaded successfully');
+        
+    } catch (error) {
+        log(`Failed to load demo: ${error.message}`);
+    }
+});
+
+// Placeholder for visualization initialization
+function initializeVisualization(data) {
+    log(`Visualization data received for ${data.robots.length} robots`);
+    log(`Total makespan: ${data.makespan} ms`);
+    // TODO: Implement Three.js visualization here
+    // You'll use data.robots array with waypoints for each robot
+}
+</script>
