@@ -1,5 +1,7 @@
 # scheduler.py
 import math
+from trajectory_planner import plan_trajectory
+from kinematics import is_point_reachable
 
 def calculate_move_time(distance, v_max, a_max):
     """
@@ -38,43 +40,20 @@ def assign_operations(robots, operations):
 
 def plan_paths(robots, v_max, a_max):
     """
-    For each robot, plan its path by calculating waypoints and timings.
-    
+    Plans trajectories for all robots using the trajectory_planner.
+    Now includes a basic reachability check.
     """
     for robot in robots:
-        schedule = []
-        current_time = 0.0
-        current_pos = (robot['base_x'], robot['base_y'], robot['base_z'])
-
-        # Start at base
-        schedule.append((current_time, current_pos[0], current_pos[1], current_pos[2]))
-
+        print(f"Planning path for {robot['id']}...")
+        # Check if all points are reachable for this robot
+        all_points = []
         for op in robot['operations']:
-            pick_point = (op['pick_x'], op['pick_y'], op['pick_z'])
-            place_point = (op['place_x'], op['place_y'], op['place_z'])
+            all_points.append((op['pick_x'], op['pick_y'], op['pick_z']))
+            all_points.append((op['place_x'], op['place_y'], op['place_z']))
 
-            # Move to Pick
-            dist_to_pick = math.sqrt(sum((a - b) ** 2 for a, b in zip(current_pos, pick_point)))
-            time_to_pick = calculate_move_time(dist_to_pick, v_max, a_max)
-            current_time += time_to_pick
-            schedule.append((current_time, pick_point[0], pick_point[1], pick_point[2]))
+        for point in all_points:
+            if not is_point_reachable(robot, *point):
+                print(f"WARNING: Point {point} may be unreachable for {robot['id']}. Proceeding anyway.")
 
-            # Perform Pick operation (wait)
-            current_time += op['t_i']
-            # We are at the pick point, no movement, just time passing
-            # schedule.append((current_time, pick_point[0], pick_point[1], pick_point[2]))
-
-            # Move to Place
-            dist_to_place = math.sqrt(sum((a - b) ** 2 for a, b in zip(pick_point, place_point)))
-            time_to_place = calculate_move_time(dist_to_place, v_max, a_max)
-            current_time += time_to_place
-            schedule.append((current_time, place_point[0], place_point[1], place_point[2]))
-
-            # Perform Place operation (wait)
-            current_time += op['t_i']
-            # schedule.append((current_time, place_point[0], place_point[1], place_point[2]))
-
-            current_pos = place_point
-
-        robot['schedule'] = schedule
-        robot['makespan'] = current_time  # Individual robot finish time
+        # Plan the trajectory
+        robot['schedule'] = plan_trajectory(robot, robot['operations'], v_max, a_max)
