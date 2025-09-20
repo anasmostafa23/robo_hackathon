@@ -57,6 +57,7 @@ def parse_output(filename):
 def get_position_at_time(robot_data, t):
     """
     Gets the (x, y) position of a robot at time t by interpolating between waypoints.
+    Returns a tuple (x, y) which is a valid sequence.
     """
     times = robot_data['times']
     x_vals = robot_data['x']
@@ -64,10 +65,10 @@ def get_position_at_time(robot_data, t):
     
     # If time is before first waypoint, return first position
     if t <= times[0]:
-        return (x_vals[0], y_vals[0])
+        return (x_vals[0], y_vals[0]) # FIX: Return a tuple
     # If time is after last waypoint, return last position
     if t >= times[-1]:
-        return (x_vals[-1], y_vals[-1])
+        return (x_vals[-1], y_vals[-1]) # FIX: Return a tuple
     
     # Find the index where the time would be inserted (finds the segment)
     idx = np.searchsorted(times, t) - 1
@@ -79,7 +80,7 @@ def get_position_at_time(robot_data, t):
     frac = (t - t_start) / (t_end - t_start)
     x = x_start + frac * (x_end - x_start)
     y = y_start + frac * (y_end - y_start)
-    return (x, y)
+    return (x, y) # This was already correct
 
 # --- Main Visualization Function ---
 def animate_simulation(output_file='output.txt', tool_clearance=0.2, safe_dist=0.1):
@@ -87,6 +88,10 @@ def animate_simulation(output_file='output.txt', tool_clearance=0.2, safe_dist=0
     Creates an animation from the output.txt file.
     """
     robots_data, makespan = parse_output(output_file)
+    # Handle case where makespan is 0 to avoid division by zero
+    if makespan <= 0:
+        makespan = 1.0
+        
     robot_ids = list(robots_data.keys())
     colors = ['red', 'blue', 'green', 'orange', 'purple', 'brown'] 
     
@@ -106,6 +111,7 @@ def animate_simulation(output_file='output.txt', tool_clearance=0.2, safe_dist=0
     robot_dots = []
     safety_circles = []
     for idx, robot_id in enumerate(robot_ids):
+        # Initialize with empty lists, not empty values
         dot, = ax.plot([], [], 'o', color=colors[idx], markersize=8, markeredgecolor='black')
         robot_dots.append(dot)
         circle = Circle((0, 0), radius=tool_clearance + safe_dist/2, fill=False, color=colors[idx], linestyle='--', alpha=0.8)
@@ -124,8 +130,10 @@ def animate_simulation(output_file='output.txt', tool_clearance=0.2, safe_dist=0
         
         # Update each robot's position
         for idx, robot_id in enumerate(robot_ids):
-            x, y = get_position_at_time(robots_data[robot_id], t)
-            robot_dots[idx].set_data(x, y)
+            pos = get_position_at_time(robots_data[robot_id], t)
+            x, y = pos
+            # set_data expects sequences (lists/arrays), so we wrap x and y in lists
+            robot_dots[idx].set_data([x], [y]) 
             safety_circles[idx].center = (x, y)
             current_positions.append((x, y))
         
@@ -141,15 +149,21 @@ def animate_simulation(output_file='output.txt', tool_clearance=0.2, safe_dist=0
                     status_ok = False
                     robot_dots[i].set_color('black')
                     robot_dots[j].set_color('black')
+                else:
+                    # Make sure color is reset if no collision
+                    if robot_dots[i].get_color() == 'black':
+                        robot_dots[i].set_color(colors[i])
+                    if robot_dots[j].get_color() == 'black':
+                        robot_dots[j].set_color(colors[j])
         
-        # Update status text
+        # status text
         if status_ok:
             status_text.set_text(f'Status: OK (Min Separation: {min_separation:.3f})')
             status_text.set_color('green')
         else:
             status_text.set_text('Status: COLLISION!')
             status_text.set_color('red')
-        # Update timer
+        # timer
         time_text.set_text(f'Time: {t:.2f}s / {makespan:.2f}s')
         
         return robot_dots + safety_circles + [time_text, status_text]
@@ -157,12 +171,15 @@ def animate_simulation(output_file='output.txt', tool_clearance=0.2, safe_dist=0
     # Create the animation
     fps = 20
     frames = np.linspace(0, makespan, int(fps * makespan))
-    ani = FuncAnimation(fig, animation_frame, frames=frames, interval=1000/fps, blit=True)
+    
+    if len(frames) == 0:
+        frames = [0]
+        
+
+    ani = FuncAnimation(fig, animation_frame, frames=frames, interval=1000/fps, blit=False, repeat=False)
     
     plt.show()
-    # To save the animation as a video for your presentation, uncomment the next line:
-    # ani.save('robot_simulation.mp4', writer='ffmpeg', fps=fps, dpi=120, bitrate=500)
+    ani.save('robot_simulation.mp4', writer='ffmpeg', fps=fps, dpi=120, bitrate=500)
 
 if __name__ == "__main__":
-    # You can change the tool_clearance and safe_dist here if needed
     animate_simulation('output.txt', tool_clearance=0.2, safe_dist=0.1)
