@@ -34,6 +34,7 @@ def serve_static(path):
     return send_from_directory(os.path.join(PROJECT_ROOT, 'web'), path)
 
 # API endpoint to run the scheduler
+# API endpoint to run the scheduler
 @app.route('/api/run_scheduler', methods=['POST'])
 def api_run_scheduler():
     try:
@@ -85,6 +86,13 @@ def api_run_scheduler():
                 with open(output_file_path, 'r') as f:
                     output_data = f.read()
                 print(f"Read output from {output_file_path}")
+                
+                # Debug: print first few lines of output
+                lines = output_data.split('\n')
+                print("First 10 lines of output:")
+                for i, line in enumerate(lines[:10]):
+                    print(f"{i}: {repr(line)}")
+                    
             else:
                 return jsonify({'error': 'Output file was not generated'}), 500
         except Exception as e:
@@ -156,37 +164,139 @@ def api_health():
     })
 
 def parse_output_metadata(output_content):
-    """Extract metadata from output file content"""
+    """Extract metadata from output file content with better error handling"""
     try:
         lines = output_content.strip().split('\n')
         if not lines:
             return {'makespan': 0, 'num_robots': 0, 'num_operations': 0, 'collisions_detected': 0}
         
-        makespan = float(lines[0].strip())
+        # Find the first non-empty line for makespan
+        makespan_line = None
+        for line in lines:
+            if line.strip():  # Skip empty lines
+                makespan_line = line.strip()
+                break
+        
+        if not makespan_line:
+            return {'makespan': 0, 'num_robots': 0, 'num_operations': 0, 'collisions_detected': 0}
+        
+        makespan = float(makespan_line)
         
         # Count robots and waypoints
         num_robots = 0
         total_waypoints = 0
-        i = 1
+        i = 1  # Start after makespan line
+        
         while i < len(lines):
-            if lines[i].startswith('R'):
+            line = lines[i].strip()
+            if not line:  # Skip empty lines
+                i += 1
+                continue
+                
+            if line.startswith('R'):
                 num_robots += 1
-                parts = lines[i].split()
+                parts = line.split()
                 if len(parts) >= 2:
-                    total_waypoints += int(parts[1])
-                i += int(parts[1]) + 1 if len(parts) >= 2 else 1
+                    try:
+                        num_waypoints = int(parts[1])
+                        total_waypoints += num_waypoints
+                        i += num_waypoints + 1  # Skip waypoint lines
+                    except ValueError:
+                        i += 1  # Skip malformed line
+                else:
+                    i += 1
             else:
                 i += 1
+        
+        # Count collisions from the debug output (this is a simple approach)
+        collisions_detected = output_content.count('COLLISION DETECTED')
         
         return {
             'makespan': makespan,
             'num_robots': num_robots,
             'num_operations': total_waypoints // 2,  # Rough estimate
-            'collisions_detected': 0  # You'll need to calculate this from your collision checker
+            'collisions_detected': collisions_detected
         }
     except Exception as e:
         print(f"Error parsing output metadata: {str(e)}")
         return {'makespan': 0, 'num_robots': 0, 'num_operations': 0, 'collisions_detected': 0}
+
+def parse_output_for_visualization(output_content):
+    """Parse output file content for visualization data with better error handling"""
+    try:
+        lines = output_content.strip().split('\n')
+        if not lines:
+            return {'robots': [], 'makespan': 0}
+        
+        # Find the first non-empty line for makespan
+        makespan_line = None
+        for line in lines:
+            if line.strip():  # Skip empty lines
+                makespan_line = line.strip()
+                break
+        
+        if not makespan_line:
+            return {'robots': [], 'makespan': 0}
+        
+        makespan = float(makespan_line)
+        robots = []
+        
+        i = 1  # Start after makespan line
+        robot_id = 1
+        
+        while i < len(lines):
+            line = lines[i].strip()
+            if not line:  # Skip empty lines
+                i += 1
+                continue
+                
+            if line.startswith('R'):
+                parts = line.split()
+                if len(parts) >= 2:
+                    try:
+                        num_waypoints = int(parts[1])
+                        waypoints = []
+                        
+                        for j in range(1, num_waypoints + 1):
+                            if i + j < len(lines):
+                                wp_line = lines[i + j].strip()
+                                if not wp_line:  # Skip empty lines
+                                    continue
+                                    
+                                wp_parts = wp_line.split()
+                                if len(wp_parts) >= 4:
+                                    try:
+                                        waypoints.append({
+                                            'time': float(wp_parts[0]),
+                                            'x': float(wp_parts[1]),
+                                            'y': float(wp_parts[2]),
+                                            'z': float(wp_parts[3])
+                                        })
+                                    except ValueError:
+                                        # Skip malformed waypoint
+                                        continue
+                        
+                        robots.append({
+                            'id': f'R{robot_id}',
+                            'waypoints': waypoints,
+                            'color': get_robot_color(robot_id)
+                        })
+                        robot_id += 1
+                        i += num_waypoints + 1
+                    except ValueError:
+                        i += 1  # Skip malformed robot header
+                else:
+                    i += 1
+            else:
+                i += 1
+        
+        return {
+            'robots': robots,
+            'makespan': makespan
+        }
+    except Exception as e:
+        print(f"Error parsing output for visualization: {str(e)}")
+        return {'robots': [], 'makespan': 0}
 
 def parse_output_for_visualization(output_content):
     """Parse output file content for visualization data"""

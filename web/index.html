@@ -417,14 +417,22 @@
                     addLogEntry('Scheduler completed successfully');
                     
                     // Parse the output for visualization
-                    const visualizationResult = await parseOutputForVisualization(result.schedule);
-                    
-                    if (visualizationResult.success) {
-                        simulationData = visualizationResult.visualization_data;
-                        updateUIWithSimulationData(simulationData, result.metadata);
+                    try {
+                        const visualizationResult = await parseOutputForVisualization(result.schedule);
+                        
+                        if (visualizationResult.success) {
+                            simulationData = visualizationResult.visualization_data;
+                            updateUIWithSimulationData(simulationData, result.metadata);
+                            updateVisualization();
+                            addLogEntry('Visualization data loaded successfully');
+                        } else {
+                            addLogEntry('Error parsing output for visualization: ' + (visualizationResult.error || 'Unknown error'));
+                        }
+                    } catch (parseError) {
+                        addLogEntry('Failed to parse output: ' + parseError.message);
+                        // Try to extract basic info even if parsing fails
+                        simulationData = extractBasicSimulationData(result.schedule);
                         updateVisualization();
-                    } else {
-                        addLogEntry('Error parsing output for visualization');
                     }
                 } else {
                     addLogEntry(`Scheduler error: ${result.error}`);
@@ -433,6 +441,42 @@
                 addLogEntry(`Failed to run scheduler: ${error.message}`);
             }
         });
+
+        // Fallback function if parsing fails
+        function extractBasicSimulationData(outputContent) {
+            // Try to extract basic information even if full parsing fails
+            const lines = outputContent.split('\n').filter(line => line.trim());
+            
+            let makespan = 0;
+            if (lines.length > 0) {
+                makespan = parseFloat(lines[0]) || 0;
+            }
+            
+            // Simple robot detection - look for lines starting with R
+            const robots = [];
+            let robotCount = 0;
+            
+            for (let i = 1; i < lines.length; i++) {
+                if (lines[i].startsWith('R')) {
+                    robotCount++;
+                    robots.push({
+                        id: `R${robotCount}`,
+                        waypoints: [],
+                        color: getRobotColor(robotCount)
+                    });
+                }
+            }
+            
+            return {
+                robots: robots,
+                makespan: makespan
+            };
+        }
+
+        function getRobotColor(robotId) {
+            const colors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#FFBE0B', '#FB5607', '#8338EC'];
+            return colors[(robotId - 1) % colors.length];
+        }
         
         loadExampleBtn.addEventListener('click', () => {
             addLogEntry('Loading example scenario...');
