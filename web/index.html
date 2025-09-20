@@ -1,249 +1,212 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Robot Scheduler Visualizer</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.min.js"></script>
+    <title>Robo Hackathon - Object Detection</title>
     <style>
         :root {
-            --primary: #2c3e50;
-            --secondary: #3498db;
-            --success: #27ae60;
-            --warning: #f39c12;
-            --danger: #e74c3c;
-            --light: #ecf0f1;
-            --dark: #34495e;
+            --primary-color: #4a6fa5;
+            --secondary-color: #166088;
+            --accent-color: #4cb5f5;
+            --background-color: #f8f9fa;
+            --text-color: #333;
+            --light-gray: #e9ecef;
+            --border-radius: 8px;
+            --box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
         
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
         
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: #333;
+            background-color: var(--background-color);
+            color: var(--text-color);
             line-height: 1.6;
-            min-height: 100vh;
             padding: 20px;
         }
         
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
-            background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
+            padding: 20px;
         }
         
         header {
-            background: var(--primary);
-            color: white;
-            padding: 20px;
             text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
         }
         
         h1 {
-            font-size: 2.2em;
+            font-size: 2.5rem;
             margin-bottom: 10px;
         }
         
         .subtitle {
-            opacity: 0.8;
-            font-size: 1.1em;
+            font-size: 1.2rem;
+            opacity: 0.9;
         }
         
         .main-content {
-            display: grid;
-            grid-template-columns: 350px 1fr;
-            gap: 0;
-            height: 70vh;
-        }
-        
-        .control-panel {
-            background: var(--light);
-            padding: 20px;
-            overflow-y: auto;
-            border-right: 2px solid #ddd;
-        }
-        
-        .section {
-            background: white;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
-        
-        .section h3 {
-            color: var(--primary);
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid var(--secondary);
-        }
-        
-        .form-group {
-            margin-bottom: 15px;
-        }
-        
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            color: var(--dark);
-        }
-        
-        input[type="file"],
-        select,
-        button {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 10px;
-            transition: all 0.3s ease;
-        }
-        
-        button {
-            background: var(--secondary);
-            color: white;
-            border: none;
-            cursor: pointer;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-        
-        button:hover {
-            background: var(--primary);
-            transform: translateY(-2px);
-        }
-        
-        button:disabled {
-            background: #95a5a6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .btn-primary { background: var(--secondary); }
-        .btn-success { background: var(--success); }
-        .btn-warning { background: var(--warning); }
-        .btn-danger { background: var(--danger); }
-        
-        .visualization-area {
-            position: relative;
-            background: #1a1a1a;
-        }
-        
-        #renderCanvas {
-            width: 100%;
-            height: 100%;
-            display: block;
-        }
-        
-        .status-bar {
-            background: var(--dark);
-            color: white;
-            padding: 12px 20px;
             display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        
-        .stats {
-            display: flex;
-            gap: 20px;
-        }
-        
-        .stat-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 8px 15px;
-            border-radius: 6px;
-        }
-        
-        .legend {
-            display: flex;
-            gap: 15px;
             flex-wrap: wrap;
-            margin: 10px 0;
+            gap: 30px;
+            margin-bottom: 30px;
         }
         
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 12px;
-        }
-        
-        .color-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            border: 2px solid white;
-        }
-        
-        .controls-horizontal {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        
-        .controls-horizontal input[type="range"] {
+        .upload-section, .result-section {
             flex: 1;
+            min-width: 300px;
+            background-color: white;
+            padding: 25px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
         }
         
-        .log-output {
-            background: #2c3e50;
-            color: #00ff00;
-            font-family: 'Courier New', monospace;
-            padding: 15px;
-            height: 120px;
-            overflow-y: auto;
-            font-size: 12px;
-            border-radius: 0 0 15px 15px;
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--light-gray);
+            color: var(--secondary-color);
         }
         
-        .collision-alert {
-            background: var(--danger);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-            margin: 10px 0;
+        .upload-area {
+            border: 2px dashed var(--accent-color);
+            border-radius: var(--border-radius);
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .upload-area:hover {
+            background-color: rgba(76, 181, 245, 0.1);
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            color: var(--accent-color);
+            margin-bottom: 15px;
+        }
+        
+        .file-input {
             display: none;
         }
         
-        .progress-bar {
+        .btn {
+            display: inline-block;
+            background-color: var(--primary-color);
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+        
+        .btn:hover {
+            background-color: var(--secondary-color);
+            transform: translateY(-2px);
+        }
+        
+        .btn-process {
+            background-color: var(--accent-color);
             width: 100%;
-            height: 6px;
-            background: #ddd;
-            border-radius: 3px;
-            overflow: hidden;
-            margin: 10px 0;
+            margin-top: 15px;
         }
         
-        .progress-fill {
-            height: 100%;
-            background: var(--success);
-            width: 0%;
-            transition: width 0.3s ease;
+        .btn-process:hover {
+            background-color: #3a9bd8;
         }
         
-        @media (max-width: 1000px) {
+        .image-preview {
+            width: 100%;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .preview-img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+        }
+        
+        .result-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .result-image {
+            max-width: 100%;
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            margin-bottom: 20px;
+        }
+        
+        .detection-results {
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        .result-item {
+            background-color: var(--light-gray);
+            padding: 15px;
+            border-radius: var(--border-radius);
+            margin-bottom: 10px;
+        }
+        
+        .result-label {
+            font-weight: bold;
+            color: var(--secondary-color);
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left: 4px solid var(--accent-color);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: #6c757d;
+        }
+        
+        @media (max-width: 768px) {
             .main-content {
-                grid-template-columns: 1fr;
-                grid-template-rows: auto 1fr;
-            }
-            
-            .control-panel {
-                border-right: none;
-                border-bottom: 2px solid #ddd;
-                max-height: 40vh;
+                flex-direction: column;
             }
         }
     </style>
@@ -251,279 +214,158 @@
 <body>
     <div class="container">
         <header>
-            <h1>🤖 Robot Scheduler Visualizer</h1>
-            <div class="subtitle">3D визуализация работы промышленных роботов</div>
+            <h1>Robo Hackathon</h1>
+            <p class="subtitle">Object Detection System</p>
         </header>
         
         <div class="main-content">
-            <div class="control-panel">
-                <div class="section">
-                    <h3>📁 Управление сценариями</h3>
-                    <div class="form-group">
-                        <label for="scenarioInput">Загрузить файл сценария:</label>
-                        <input type="file" id="scenarioInput" accept=".txt">
-                    </div>
-                    <div class="form-group">
-                        <label for="scenarioSelect">Примеры сценариев:</label>
-                        <select id="scenarioSelect">
-                            <option value="">Выберите пример...</option>
-                        </select>
-                    </div>
-                    <button id="btnRunScheduler" class="btn-primary">🚀 Запустить планировщик</button>
-                    <button id="btnLoadDemo" class="btn-warning">📊 Загрузить демо</button>
+            <div class="upload-section">
+                <h2 class="section-title">Upload Image</h2>
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <p>Click or drag an image to upload</p>
+                    <p class="small">Supported formats: JPG, PNG, JPEG</p>
+                    <input type="file" id="fileInput" class="file-input" accept="image/*">
                 </div>
+                <button class="btn btn-process" id="processBtn" disabled>Process Image</button>
                 
-                <div class="section">
-                    <h3>🎬 Управление визуализацией</h3>
-                    <div class="form-group">
-                        <label for="timeRange">Время: <span id="timeLabel">0 ms</span></label>
-                        <input type="range" id="timeRange" min="0" max="1000" value="0">
-                        <div class="progress-bar">
-                            <div class="progress-fill" id="progressFill"></div>
-                        </div>
-                    </div>
-                    <div class="controls-horizontal">
-                        <button id="btnPlay" class="btn-success">▶ Воспроизвести</button>
-                        <button id="btnPause" class="btn-warning" disabled>⏸ Пауза</button>
-                        <button id="btnReset" class="btn-danger">⏹ Сброс</button>
-                    </div>
-                    <div class="form-group">
-                        <label for="speedSelect">Скорость воспроизведения:</label>
-                        <select id="speedSelect">
-                            <option value="0.25">0.25x</option>
-                            <option value="0.5">0.5x</option>
-                            <option value="1" selected>1x</option>
-                            <option value="2">2x</option>
-                            <option value="4">4x</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <h3>⚙️ Настройки отображения</h3>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="showSafetyZones" checked>
-                            Показывать зоны безопасности
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="showTrajectories" checked>
-                            Показывать траектории
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="showWaypoints" checked>
-                            Показывать точки пути
-                        </label>
-                    </div>
-                </div>
-                
-                <div class="section">
-                    <h3>📊 Информация о системе</h3>
-                    <div id="systemInfo">
-                        <p>Загрузите сценарий для начала работы</p>
-                    </div>
-                    <div class="collision-alert" id="collisionAlert">
-                        ⚠️ Обнаружены столкновения!
-                    </div>
+                <div class="image-preview">
+                    <img id="previewImg" class="preview-img" src="" alt="Preview" style="display: none;">
                 </div>
             </div>
             
-            <div class="visualization-area">
-                <canvas id="renderCanvas"></canvas>
+            <div class="result-section">
+                <h2 class="section-title">Detection Results</h2>
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p>Processing image...</p>
+                </div>
+                <div class="result-container">
+                    <img id="resultImg" class="result-image" src="" alt="Result" style="display: none;">
+                    <div class="detection-results" id="detectionResults"></div>
+                </div>
             </div>
         </div>
         
-        <div class="status-bar">
-            <div class="stats">
-                <div class="stat-item" id="statRobots">🤖 Роботов: 0</div>
-                <div class="stat-item" id="statOperations">📦 Операций: 0</div>
-                <div class="stat-item" id="statMakespan">⏱ Makespan: 0 ms</div>
-                <div class="stat-item" id="statCollisions">⚠️ Столкновений: 0</div>
-            </div>
-            <div class="legend" id="robotLegend"></div>
-        </div>
-        
-        <div class="log-output" id="logOutput">
-            > Система инициализирована. Готов к работе.
-        </div>
+        <footer>
+            <p>Robo Hackathon Project - Object Detection System</p>
+        </footer>
     </div>
 
     <script>
-// Configuration
-const API_BASE = 'http://localhost:5000/api';
-
-// DOM Elements
-const scenarioInput = document.getElementById('scenarioInput');
-const scenarioSelect = document.getElementById('scenarioSelect');
-const btnRunScheduler = document.getElementById('btnRunScheduler');
-const btnLoadDemo = document.getElementById('btnLoadDemo');
-const logOutput = document.getElementById('logOutput');
-
-// Initialize
-document.addEventListener('DOMContentLoaded', async () => {
-    log('System initialized. Ready to work.');
-    await loadScenarios();
-});
-
-// Logging function
-function log(message) {
-    logOutput.innerHTML += `> ${message}\n`;
-    logOutput.scrollTop = logOutput.scrollHeight;
-}
-
-// API functions
-async function runScheduler(scenarioContent) {
-    try {
-        log('Running scheduler...');
-        const response = await fetch(`${API_BASE}/run_scheduler`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ scenario: scenarioContent })
+        document.addEventListener('DOMContentLoaded', function() {
+            const fileInput = document.getElementById('fileInput');
+            const uploadArea = document.getElementById('uploadArea');
+            const previewImg = document.getElementById('previewImg');
+            const processBtn = document.getElementById('processBtn');
+            const resultImg = document.getElementById('resultImg');
+            const detectionResults = document.getElementById('detectionResults');
+            const loading = document.getElementById('loading');
+            
+            // File upload handling
+            uploadArea.addEventListener('click', () => {
+                fileInput.click();
+            });
+            
+            uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadArea.style.backgroundColor = 'rgba(76, 181, 245, 0.2)';
+            });
+            
+            uploadArea.addEventListener('dragleave', () => {
+                uploadArea.style.backgroundColor = '';
+            });
+            
+            uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadArea.style.backgroundColor = '';
+                
+                if (e.dataTransfer.files.length) {
+                    fileInput.files = e.dataTransfer.files;
+                    handleFileSelect(e.dataTransfer.files[0]);
+                }
+            });
+            
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length) {
+                    handleFileSelect(fileInput.files[0]);
+                }
+            });
+            
+            function handleFileSelect(file) {
+                if (!file.type.match('image.*')) {
+                    alert('Please select an image file.');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    previewImg.style.display = 'block';
+                    processBtn.disabled = false;
+                };
+                
+                reader.readAsDataURL(file);
+            }
+            
+            // Process image
+            processBtn.addEventListener('click', async () => {
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    alert('Please select an image first.');
+                    return;
+                }
+                
+                loading.style.display = 'block';
+                resultImg.style.display = 'none';
+                detectionResults.innerHTML = '';
+                
+                const formData = new FormData();
+                formData.append('image', file);
+                
+                try {
+                    // Send request to your backend API
+                    const response = await fetch('http://localhost:5000/api/detect', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Server returned ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    
+                    // Display the processed image
+                    resultImg.src = 'data:image/jpeg;base64,' + data.image;
+                    resultImg.style.display = 'block';
+                    
+                    // Display detection results
+                    if (data.detections && data.detections.length > 0) {
+                        data.detections.forEach(detection => {
+                            const resultItem = document.createElement('div');
+                            resultItem.className = 'result-item';
+                            resultItem.innerHTML = `
+                                <p><span class="result-label">Object:</span> ${detection.class}</p>
+                                <p><span class="result-label">Confidence:</span> ${(detection.confidence * 100).toFixed(2)}%</p>
+                                <p><span class="result-label">Position:</span> X: ${detection.x}, Y: ${detection.y}</p>
+                                <p><span class="result-label">Dimensions:</span> Width: ${detection.width}, Height: ${detection.height}</p>
+                            `;
+                            detectionResults.appendChild(resultItem);
+                        });
+                    } else {
+                        detectionResults.innerHTML = '<div class="result-item">No objects detected</div>';
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error processing image: ' + error.message);
+                } finally {
+                    loading.style.display = 'none';
+                }
+            });
         });
-        
-        const result = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(result.error || 'Scheduler failed');
-        }
-        
-        log('Scheduler completed successfully!');
-        return result;
-    } catch (error) {
-        log(`ERROR: ${error.message}`);
-        throw error;
-    }
-}
-
-async function parseOutputForVisualization(outputContent) {
-    try {
-        log('Parsing output for visualization...');
-        const response = await fetch(`${API_BASE}/parse_output`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ output_content: outputContent })
-        });
-        
-        const result = await response.json();
-        
-        if (!response.ok) {
-            throw new Error(result.error || 'Output parsing failed');
-        }
-        
-        return result;
-    } catch (error) {
-        log(`ERROR: ${error.message}`);
-        throw error;
-    }
-}
-
-async function loadScenarios() {
-    try {
-        const response = await fetch(`${API_BASE}/scenarios`);
-        const result = await response.json();
-        
-        if (!response.ok) {
-            throw new Error('Failed to load scenarios');
-        }
-        
-        // Populate scenario dropdown
-        scenarioSelect.innerHTML = '<option value="">Select example...</option>';
-        result.scenarios.forEach(scenario => {
-            const option = document.createElement('option');
-            option.value = scenario.file;
-            option.textContent = scenario.name;
-            scenarioSelect.appendChild(option);
-        });
-        
-        return result.scenarios;
-    } catch (error) {
-        log(`ERROR: ${error.message}`);
-        return [];
-    }
-}
-
-// File handling
-scenarioInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const content = e.target.result;
-            log(`File loaded: ${file.name}`);
-            // Store content for later use
-            scenarioInput.dataset.content = content;
-        };
-        reader.readAsText(file);
-    }
-});
-
-// Button event handlers
-btnRunScheduler.addEventListener('click', async () => {
-    let scenarioContent = scenarioInput.dataset.content;
-    
-    if (!scenarioContent) {
-        log('ERROR: Please load a scenario file first');
-        return;
-    }
-    
-    try {
-        const result = await runScheduler(scenarioContent);
-        
-        // Update UI with results
-        document.getElementById('statRobots').textContent = `🤖 Robots: ${result.metadata.num_robots}`;
-        document.getElementById('statOperations').textContent = `📦 Operations: ${result.metadata.num_operations}`;
-        document.getElementById('statMakespan').textContent = `⏱ Makespan: ${result.makespan} ms`;
-        document.getElementById('statCollisions').textContent = `⚠️ Collisions: ${result.metadata.collisions_detected}`;
-        
-        // Parse output for visualization
-        const visualizationResult = await parseOutputForVisualization(result.schedule);
-        initializeVisualization(visualizationResult.visualization_data);
-        
-    } catch (error) {
-        log(`Scheduler failed: ${error.message}`);
-    }
-});
-
-btnLoadDemo.addEventListener('click', async () => {
-    const selectedFile = scenarioSelect.value;
-    if (!selectedFile) {
-        log('Please select a demo scenario');
-        return;
-    }
-    
-    try {
-        // For now, we'll create a simple demo content
-        const demoContent = `2 3
-0.0 0.0 0.0
-2.5 0.0 0.0
--170.0 170.0 100.0 500.0
--120.0 120.0 90.0 450.0
--170.0 170.0 100.0 500.0
--120.0 120.0 90.0 450.0
--270.0 270.0 180.0 720.0
--270.0 270.0 180.0 720.0
-0.25 0.5
-1.0 1.0 0.5 1.5 1.5 0.5 2.0
-0.5 2.0 0.8 2.0 2.0 0.8 1.5
-2.0 1.0 0.6 0.5 1.5 0.6 2.5`;
-        
-        scenarioInput.dataset.content = demoContent;
-        log('Demo scenario loaded successfully');
-        
-    } catch (error) {
-        log(`Failed to load demo: ${error.message}`);
-    }
-});
-
-// Placeholder for visualization initialization
-function initializeVisualization(data) {
-    log(`Visualization data received for ${data.robots.length} robots`);
-    log(`Total makespan: ${data.makespan} ms`);
-    // TODO: Implement Three.js visualization here
-    // You'll use data.robots array with waypoints for each robot
-}
-</script>
+    </script>
+</body>
+</html>
