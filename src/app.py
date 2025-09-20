@@ -1,4 +1,4 @@
-# app.py
+# app.py (located in src/)
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
@@ -7,28 +7,31 @@ import sys
 import json
 import traceback
 
-# Add the current directory to the path so we can import our modules
+# Get the project root directory (one level up from src/)
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+
+# Add the src directory to the path so we can import our modules
 sys.path.append(os.path.dirname(__file__))
 
 app = Flask(__name__)
 CORS(app)  # This allows your frontend to talk to the backend
 
 # Create required directories if they don't exist
-os.makedirs('data', exist_ok=True)
-os.makedirs('web', exist_ok=True)
+os.makedirs(os.path.join(PROJECT_ROOT, 'data'), exist_ok=True)
+os.makedirs(os.path.join(PROJECT_ROOT, 'web'), exist_ok=True)
 
 # Serve the main visualizer page
 @app.route('/')
 def serve_visualizer():
     try:
-        return send_from_directory('web', 'index.html')
+        return send_from_directory(os.path.join(PROJECT_ROOT, 'web'), 'index.html')
     except Exception as e:
         return f"Error serving index.html: {str(e)}. Make sure you have a 'web' directory with index.html."
 
 # Serve static files from the web directory (CSS, JS, etc.)
 @app.route('/<path:path>')
 def serve_static(path):
-    return send_from_directory('web', path)
+    return send_from_directory(os.path.join(PROJECT_ROOT, 'web'), path)
 
 # API endpoint to run the scheduler
 @app.route('/api/run_scheduler', methods=['POST'])
@@ -42,7 +45,7 @@ def api_run_scheduler():
         scenario_content = data['scenario']
         
         # Save the scenario content to input.txt
-        input_file_path = os.path.join('data', 'input.txt')
+        input_file_path = os.path.join(PROJECT_ROOT, 'data', 'input.txt')
         try:
             with open(input_file_path, 'w') as f:
                 f.write(scenario_content)
@@ -56,7 +59,7 @@ def api_run_scheduler():
         try:
             result = subprocess.run([
                 sys.executable, 'main.py', input_file_path
-            ], capture_output=True, text=True, cwd=os.getcwd(), timeout=30)  # Added timeout
+            ], capture_output=True, text=True, cwd=os.path.join(PROJECT_ROOT, 'src'), timeout=30)
 
             # Check if main.py ran successfully
             if result.returncode != 0:
@@ -75,7 +78,7 @@ def api_run_scheduler():
             return jsonify({'error': f'Failed to run scheduler: {str(e)}'}), 500
 
         # Read the generated output
-        output_file_path = os.path.join('data', 'output.txt')
+        output_file_path = os.path.join(PROJECT_ROOT, 'data', 'output.txt')
         output_data = ""
         try:
             if os.path.exists(output_file_path):
@@ -246,6 +249,7 @@ def get_robot_color(robot_id):
 if __name__ == '__main__':
     # Run the Flask app
     print("Starting Robotics Scheduler Server...")
+    print("Project root:", PROJECT_ROOT)
     print("Open: http://localhost:5000")
     print("API Health check: http://localhost:5000/api/health")
     app.run(debug=True, port=5000)
