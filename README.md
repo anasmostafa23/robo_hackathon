@@ -192,4 +192,3 @@ R2 23
 - Processes 3-6 operations in reasonable time
 - Real-time visualization for up to 500 waypoints
 - Collision detection at 10ms resolution
-
