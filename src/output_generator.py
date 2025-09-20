@@ -2,51 +2,29 @@
 def write_output(robots, output_file_path='output.txt'):
     """
     Write the schedule to an output file.
-    Supports both `schedule` and `waypoints` as sources.
+    Supports robots having `schedule` as list of (t, x, y, z).
     """
     with open(output_file_path, 'w') as f:
-        # Calculate makespan
-        makespan = 0
+        makespan = 0.0
+
+        # --- compute makespan ---
         for robot in robots:
-            waypoints = (
-                getattr(robot, 'waypoints', None)
-                or robot.get('waypoints')
-                or robot.get('schedule')  # <-- added this
-            )
-            if not waypoints:
-                continue
+            waypoints = robot.get('schedule', [])
+            if waypoints:
+                last_time = waypoints[-1][0]  # tuple (t, x, y, z)
+                makespan = max(makespan, last_time)
 
-            last_wp = waypoints[-1]
-            if hasattr(last_wp, 'time'):
-                last_time = last_wp.time
-            elif isinstance(last_wp, dict) and 'time' in last_wp:
-                last_time = last_wp['time']
-            else:
-                continue
-            makespan = max(makespan, last_time)
-
-        # Write makespan (in milliseconds)
+        # write makespan in milliseconds
         f.write(f"{makespan * 1000:.6f}\n")
 
-        # Write robot schedules
+        # --- write each robot’s schedule ---
         for i, robot in enumerate(robots):
             robot_id = i + 1
-            waypoints = (
-                getattr(robot, 'waypoints', None)
-                or robot.get('waypoints')
-                or robot.get('schedule')  # <-- added this
-                or []
-            )
-
+            waypoints = robot.get('schedule', [])
             f.write(f"R{robot_id} {len(waypoints)}\n")
 
             for wp in waypoints:
-                if hasattr(wp, 'time'):
-                    time_ms = wp.time * 1000
-                    x, y, z = wp.x, wp.y, wp.z
-                elif isinstance(wp, dict):
-                    time_ms = wp.get('time', 0) * 1000
-                    x, y, z = wp.get('x', 0), wp.get('y', 0), wp.get('z', 0)
-                else:
-                    continue
-                f.write(f"{time_ms:.6f} {x:.6f} {y:.6f} {z:.6f}\n")
+                if isinstance(wp, (tuple, list)) and len(wp) >= 4:
+                    time_ms = wp[0] * 1000
+                    x, y, z = wp[1], wp[2], wp[3]
+                    f.write(f"{time_ms:.6f} {x:.6f} {y:.6f} {z:.6f}\n")
